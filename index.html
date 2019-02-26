@@ -1,0 +1,578 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Large Scale Landuse Classification of Satellite Imagery</title>
+
+    <meta name="description" content="Large Scale Landuse Classification of Satellite Imagery">
+    <meta name="author" content="Suneel Marthi">
+
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="font-awesome-4.7.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/bbuzz17.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+    <!--[if lt IE 9]> <script src="lib/js/html5shiv.js"></script> <![endif]-->
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section data-background-image="img/beam_summit_2018.png" style="size: 90%">
+          <br/>
+          <br/>
+          <br/>
+          <h3>Large Scale Landuse Classification of Satellite Imagery</h3>
+          <br/>
+          <p>Suneel Marthi</p>
+          <p style="font-size: 60%">February 27, 2019<br/>
+             Big Data Technology Summit, Warsaw, Poland</p>
+        </section>
+        <section data-background-image="img/beam_summit_2018.png.jpg">
+          <h3>Agenda</h3>
+          <ul>
+            <li>Introduction</li>
+            <li>Satellite Image Data Description</li>
+            <li>Cloud Classification</li>
+            <li>Segmentation</li>
+            <li>Apache Beam</li>
+            <li>Beam Inference Pipeline</li>
+            <li>Demo</li>
+            <li>Future Work</li>
+          </ul>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+          <h4>Goal: Identify Tulip fields from Sentinel-2 satellite images</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/tulip-fields.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Workflow</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/slide3.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h3>Data: Sentinel-2</h3>
+            <p style='text-align: left'>Earth observation mission from ESA</p>
+            <p style='text-align: left'>13 spectral bands, from RGB to SWIR (Short Wave Infrared)</p>
+            <p style='text-align: left'>Spatial resolution: 10m/px (RGB bands)</p>
+            <p style='text-align: left'>5 day revisit time</p>
+            <p style='text-align: left'>Free and open data policy</p>
+            <img src='img/slide5.png' style=' position: absolute; right: 0px; bottom: 0px; width: 30%; height: 30%; margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/><br/>
+        </section>
+
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <h3>Data acquisition</h3>
+            <p style='text-align: left'>Images downloaded using Sentinel Hub’s WMS (web mapping service)</p>
+            <p style='text-align: left'>Download tool from Matthieu Guillaumin (@mguillau)</p>
+            <table>
+                <td><img src='img/slide6.png' style='margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/><br/></td>
+                <td><img src='img/slide6-2.png' style='margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/><br/></td>
+            </table>
+        </section>
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <h3>Data</h3>
+            <p style='text-align: left'>256 x 256 px images, RGB</p>
+            <img src='img/slide7.png' style='margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/><br/>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Workflow</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/slide8.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h3>Filter Clouds</h3>
+            <p style='text-align: left'>Need to remove cloudy images before segmenting</p>
+            <p style='text-align: left'>Approach: train a Neural Network to classify images as clear or cloudy</p>
+            <p style='text-align: left'>CNN Architectures: ResNet50 and ResNet101</p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>ResNet building block</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/residual_block.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h3>Filter Clouds: training data</h3>
+            <p style='text-align: left'>‘Planet: Understanding the Amazon from Space’ Kaggle competition</p>
+            <p style='text-align: left'>40K images labeled as clear, hazy, partly cloudy or cloudy</p>
+            <img src='img/slide10.png' style='margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/><br/>
+        </section>
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <p>Filter Clouds: Training data(2)</p>
+            <table>
+                <thead>
+                <tr>
+                    <th>Origin</th><th>No. of Images</th><th>Cloudy Images</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Kaggle Competition</td><td>40000</td><td>30%</td>
+                </tr>
+                <tr>
+                    <td>Sentinel-2(hand labelled)</td><td>5000</td><td>50%</td>
+                </tr>
+                <tr>
+                    <td>Total</td><td>45000</td><td>32%</td>
+                </tr>
+                </tbody>
+            </table>
+            <p>Only two classes: clear and cloudy (cloudy = haze + partly cloudy + cloudy) </p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Training data split</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/slide12.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <p>Results</p>
+            <table>
+                <thead>
+                <tr>
+                    <th>Model</th><th>Accuracy</th><th>F1</th><th>Epochs (train + finetune)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>ResNet50</td><td>0.983</td><td>0.986</td><td>23 + 7</td>
+                </tr>
+                <tr>
+                    <td>ResNet101</td><td>0.978</td><td>0.982</td><td>43 + 9</td>
+                </tr>
+                </tbody>
+            </table>
+            <p>Choose ResNet50 for filtering cloudy images</p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Example Results</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/slide14.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>Data Augmentation</h3>
+            <img src='img/slide-aug.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+
+            <pre><code data-trim data-noescape>
+                import Augmentor
+
+                p = Augmentor.Pipeline(img_dir)
+
+                p.skew(probability=0.5, magnitude=0.5)
+                p.shear(probability=0.3, max_shear=15)
+                p.flip_left_right(probability=0.5)
+                p.flip_top_bottom(probability=0.5)
+                p.rotate_random_90(probability=0.75)
+                p.rotate(probability=0.75, max_rotation=20)
+            </code></pre>
+
+            </table>
+        </section>
+        <section data-background-image="img/ZsMwlm2-redish.jpg">
+            <h4>Example Data Augmentation</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/DataAugmentation.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Workflow</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/slide15.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Segmentation Goals</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/slide16.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>Approach U-Net</h3>
+            <ul>
+                <li>State of the Art CNN for Image Segmentation</li>
+                <li>Commonly used with biomedical images</code></li>
+                <li>Best Architecture for tasks like this</li>
+            </ul>
+            <p style="font-size: 35%;"><i>O. Ronneberger, P.Fischer, and T. Brox. U-net: Convolutional networks for biomedical image segmentation. arxiv:1505.04597, 2015</i></p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>U-Net Architecture</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/unet_architecture.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>U-Net Building Blocks</h3>
+            <pre><code data-trim data-noescape>
+                def conv_block(channels, kernel_size):
+                   out = nn.HybridSequential()
+                   out.add(
+                       nn.Conv2D(channels, kernel_size, padding=1, use_bias=False),
+                       nn.BatchNorm(),
+                       nn.Activation('relu')
+                   )
+                   return out
+            </code></pre>
+            <pre><code data-trim data-noescape>
+                def down_block(channels):
+                   out = nn.HybridSequential()
+                   out.add(
+                       conv_block(channels, 3),
+                       conv_block(channels, 3)
+                   )
+                   return out
+            </code></pre>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>U-Net Building Blocks (2)</h3>
+            <pre><code data-trim data-noescape>
+                class up_block(nn.HybridBlock):
+                   def __init__(self, channels, shrink=True, **kwargs):
+                       super(up_block, self).__init__(**kwargs)
+                       self.upsampler = nn.Conv2DTranspose(channels=channels, kernel_size=4,
+                                                            strides=2, padding=1, use_bias=False)
+                       self.conv1 = conv_block(channels, 1)
+                       self.conv3_0 = conv_block(channels, 3)
+                       if shrink:
+                           self.conv3_1 = conv_block(int(channels/2), 3)
+                       else:
+                           self.conv3_1 = conv_block(channels, 3)
+                   def hybrid_forward(self, F, x, s):
+                       x = self.upsampler(x)
+                       x = self.conv1(x)
+                       x = F.relu(x)
+                       x = F.Crop(*[x,s], center_crop=True)
+                       x = s + x
+                       x = self.conv3_0(x)
+                       x = self.conv3_1(x)
+                       return x
+            </code></pre>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>U-Net: Training data</h3>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>
+                            <ul>
+                                <li>Ground truth: tulip fields in the Netherlands</li>
+                                <li>Provided by Geopedia, from Sinergise</li>
+                                <img src='img/slide21.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+                            </ul>
+                        </td>
+                        <td>
+                            <img src='img/slide21-2.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+                        </td>
+
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Loss function: Soft Dice Coefficient loss</h4>
+            <img src='img/slide22.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            <p style='...'>Prediction = Probability of each pixel belonging to a Tulip Field (Softmax output)</p>
+            <p style='...'>ε serves to prevent division by zero</p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <h4>Evaluation Metric: Intersection Over Union(IoU)</h4>
+            <img src='img/slide23.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            <p style='...'><i>Aka</i> Jaccard Index</p>
+            <p style='...'>Similar to Dice coefficient, standard metric for image segmentation </p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <h4>Evaluation Metric: Intersection Over Union(IoU)</h4>
+            <img src='img/iou.jpg' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>Results</h3>
+            <ul>
+                <li><b>IoU = 0.73</b> after 23 training epochs</li>
+                <li>Related results: DSTL Kaggle competition</li>
+                <li>IoU = 0.84 on crop vs building/road/water/etc segmentation</li>
+            </ul>
+            <p style="font-size: 35%;"><i>https://www.kaggle.com/c/dstl-satellite-imagery-feature-detection/discussion/29790</i></p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>Multi-Spectral Images</h3>
+            <ul>
+                <li>Measures reflectances with wavelength from 440nm - 2200nm</li>
+                <li>13 bands covering - visible, near infrared and shortwave infrared spectrum</li>
+            </ul>
+            <p style="font-size: 35%;"><i>https://www.kaggle.com/c/dstl-satellite-imagery-feature-detection/discussion/29790</i></p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <img src='img/all_bands.png' style='margin: 0px, 20px, 0px, 20px; ' />
+        </section>
+
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <h3>What is Apache Beam?</h3>
+            <ul>
+                <li>Agnostic (unified Batch + Stream) programming model </li>
+                <li>Java, Python, Go SDKs</li>
+                <li>Runners for Dataflow</li>
+                <ul>
+                    <li>Apache Flink</li>
+                    <li>Apache Spark</li>
+                    <li>Google Cloud Dataflow</li>
+                    <li>Local DataRunner</li>
+                </ul>
+            </ul>
+            <img src='img/beam_logo_navbar.png' style=' position: absolute; right: 0px; bottom: 0px; width: 30%; height: 30%; margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/><br/>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h3>Why Apache Beam?</h3>
+            <ul>
+                <li>Portability: Code abstraction that can be executed on different backend runners</li><br>
+                <li>Unified: Unified batch and Streaming API</li><br>
+                <li>Expandable models and SDK: Extensible API to define custom sinks and sources</li><br>
+            </ul>
+        </section>
+        <section data-background-image="img/beam_summit_2018.jpg">
+            <h3>The Apache Beam Vision</h3>
+            <div style="float: left; width: 49%">
+                <ul>
+                    <li>End Users: Create pipelines in a familiar language </li>
+                    <li>SDK Writers: Make Beam concepts available in new languages</li>
+                    <li>Runner Writers: Support Beam pipelines in distributed processing environments</li>
+                </ul>
+            </div>
+            <div style="float: right; width: 49%">
+                <img src='img/beam-model.png' style='height: auto; margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/>
+            </div>
+        </section>
+        <section data-background-image="img/beam_summit_2018.png">
+            <h3>Inference Pipeline</h3>
+            <img src='img/inference-pipeline.png' style='max-width: 80%; border: none; background: none;box-shadow: none; '/>
+        </section>
+        <section data-background-image="img/beam_summit_2018.png">
+            <h3>Beam Inference Pipeline</h3>
+            <pre><code data-trim data-noescape>
+                pipeline_options = PipelineOptions(pipeline_args)
+                pipeline_options.view_as(SetupOptions).save_main_session = True
+                pipeline_options.view_as(StandardOptions).streaming = True
+
+                with beam.Pipeline(options=pipeline_options) as p:
+                    filtered_images = (p | "Read Images" >> beam.Create(glob.glob(known_args.input + '*wms*' + '.png'))
+                    | "Batch elements" >> beam.BatchElements(0, known_args.batchsize)3
+                    | "Filter Cloudy images" >> beam.ParDo(FilterCloudyFn.FilterCloudyFn(known_args.models)))
+
+                filtered_images | "Segment for Land use" >>
+                            beam.ParDo(UNetInference.UNetInferenceFn(known_args.models, known_args.output))
+            </code></pre>
+        </section>
+        <section>
+            <h3>Cloud Classifier DoFn</h3>
+            <pre><code data-trim data-noescape>
+                class FilterCloudyFn(apache_beam.DoFn):
+
+                def process(self, element):
+                """
+                Returns clear images after filtering the cloudy ones
+                :param element:
+                :return:
+                """
+                clear_images = []
+                batch = self.load_batch(element)
+                batch = batch.as_in_context(self.ctx)
+                preds = mx.nd.argmax(self.net(batch), axis=1)
+                idxs = np.arange(len(element))[preds.asnumpy() == 0]
+                clear_images.extend([element[i] for i in idxs])
+                yield clear_images
+            </code></pre>
+        </section>
+        <section>
+            <h3>U-Net Segmentation DoFn</h3>
+            <pre><code data-trim data-noescape>
+                class UNetInferenceFn(apache_beam.DoFn):
+
+                    def save_batch(self, filenames, predictions):
+                        for idx, fn in enumerate(filenames):
+                            base, ext = os.path.splitext(os.path.basename(fn))
+                            mask_name = base + "_predicted_mask" + ext
+                            imsave(os.path.join(self.output, mask_name) , predictions[idx].asnumpy())
+            </code></pre>
+        </section>
+        <section data-background-image="img/ZsMwlm2.jpg">
+            <h2>Demo</h2>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>No Tulip Fields</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/no-tulips-segmentation.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <h4>Large Tulip Fields</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/tulips-segmentation.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-redish.jpg">
+            <h4>Small Tulips Fields</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/tulips1-segmentation.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-redish.jpg">
+            <h4>RGB vs MultiSpectral (Full Bloom)</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/comp1.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-redish.jpg">
+            <h4>RGB vs MultiSpectral (Full Bloom)</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/comp5.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+                <section data-background-image="img/ZsMwlm2-redish.jpg">
+                    <h4>RGB vs MultiSpectral (Cloudy)</h4>
+                    <div style="background: #c9c9c9;">
+                        <img src='img/comp6.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+                    </div>
+                </section>
+                <section data-background-image="img/ZsMwlm2-redish.jpg">
+                    <h4>RGB vs MultiSpectral (Cloudy)</h4>
+                    <div style="background: #c9c9c9;">
+                        <img src='img/comp7.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+                    </div>
+                </section>
+            <section data-background-image="img/ZsMwlm2-redish.jpg">
+                <h4>RGB vs MultiSpectral (Complex Tulip Fields)</h4>
+                <div style="background: #c9c9c9;">
+                    <img src='img/comp8.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+                </div>
+            </section>
+                <section data-background-image="img/ZsMwlm2-redish.jpg">
+                    <h4>RGB vs MultiSpectral (Complex Tulip Fields)</h4>
+                    <div style="background: #c9c9c9;">
+                        <img src='img/comp9.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+                    </div>
+                </section>
+        <section data-background-image="img/ZsMwlm2-redish.jpg">
+            <h4>RGB vs MultiSpectral (Tulips Not Obvious)</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/comp3.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+        <section data-background-image="img/ZsMwlm2-redish.jpg">
+            <h4>RGB vs MultiSpectral (Tulips Not Obvious)</h4>
+            <div style="background: #c9c9c9;">
+                <img src='img/comp4.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+            </div>
+        </section>
+                <section data-background-image="img/ZsMwlm2-redish.jpg">
+                    <h4>Comparison: RGB vs MultiSpectral</h4>
+                    <div style="background: #c9c9c9;">
+                        <img src='img/rgb_vs_ms.png' style='margin: 0px, 20px, 0px, 20px; border: none; background: none;box-shadow: none; '/><br/>
+                    </div>
+                </section>
+        <section data-background-image="img/ZsMwlm2.jpg">
+            <h2>Future Work</h2>
+        </section>
+        <section data-background-image="img/ZsMwlm2-greenish.jpg">
+            <h4>Classify Rock Formations</h4>
+            <p style='text-align: left'>Using Shortwave Infrared images (2.107 - 2.294 nm)</p>
+            <p style='text-align: left'>Radiant Energy reflected/transmitted per unit time (Radiant Flux)</p>
+            <img src='img/radiant_flux.png' style='margin: 0px, 0px, 0px, 0px; border: none; background: none;box-shadow: none; '/><br/>
+            <p style='text-align: left'>Eg: Plants don't grow on rocks</p>
+            <p style="font-size: 35%;"><i>https://en.wikipedia.org/wiki/Radiant_flux</i></p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-purpleish.jpg">
+            <h4>Measure Crop Health</h4>
+            <p style='text-align: left'>Using Near-Infrared (NIR) radiation</p>
+            <p style='text-align: left'>Emitted by plant Chlorophyll and Mesophyll</p>
+            <p style='text-align: left'>Chlorophyll content differs between plants and plant stages</p>
+            <p style='text-align: left'>Good measure to identify different plants and their health</p>
+            <p style="font-size: 35%;"><i>https://en.wikipedia.org/wiki/Near-infrared_spectroscopy#Agriculture</i></p>
+        </section>
+        <section data-background-image="img/ZsMwlm2-yellowish.jpg">
+            <h4>Use images from Red band</h4>
+            <p style='text-align: left'>Identify borders, regions without much details with naked eye - Wonder Why?</p>
+            <p style='text-align: left'>Images are in Redband</p>
+            <p style='text-align: left'>Unsupervised Learning - Clustering</p>
+        </section>
+        <section data-background-image="img/beam_summit_2018.png">
+          <h3>Credits</h3>
+          <ul>
+            <li>Jose Contreras, Matthieu Guillaumin, Kellen Sunderland (Amazon - Berlin)</li>
+            <li>Anse Zupanc - Synergise</li>
+            <li>Apache Beam: Pablo Estrada, Ankur Goenka, Maximilian Michels (Google)</li>
+          </ul>
+        </section>
+        <section data-background-image="img/beam_summit_2018.jpg">
+          <h2>Links</h2>
+          <ul>
+            <li>Earth on AWS: https://aws.amazon.com/earth/</li><br/>
+            <li>Semantic Segmentation - U-Net: https://medium.com/@keremturgutlu/semantic-segmentation-u-net-part-1-d8d6f6005066</li><br/>
+            <li>ResNet: https://arxiv.org/pdf/1512.03385.pdf</li><br/>
+            <li>U-Net: https://arxiv.org/pdf/1505.04597.pdf</li>
+          </ul>
+        </section>
+        <section>
+            <h2>Links (contd)</h2>
+            <ul>
+                <li>Apache Beam: https://beam.apache.org</li><br/>
+                <li>Slides: https://smarthi.github.io/BigDataTechWarsaw-satellite-imagery</li><br/>
+                <li>Code: https://github.com/smarthi/satellite-images</li>
+            </ul>
+        </section>
+        <section data-background-image="img/ZsMwlm2.jpg">
+          <h2>Fragen ???</h2>
+        </section>
+
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+        controls: false,
+        progress: true,
+        history: true,
+        center: true,
+        slideNumber: true,
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+        keyboard: true,
+        touch: true,
+        loop: false,
+        fragments: true,
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
